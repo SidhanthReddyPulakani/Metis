@@ -1,0 +1,408 @@
+Yep. Let's set up **Metis as a deployable monorepo from day one**, rather than building locally and figuring out deployment later.
+
+I recommend **Docker-first development**. The same containers we run locally can later be deployed to a cloud VM/container platform.
+
+## 1. Project structure
+
+```text
+metis/
+├── apps/
+│   ├── web/                 # Next.js
+│   └── api/                 # FastAPI
+│
+├── workers/
+│   └── ingestion/           # ingestion worker
+│
+├── packages/
+│   └── shared/              # shared schemas/contracts
+│
+├── infrastructure/
+│   ├── docker/
+│   └── nginx/
+│
+├── tests/
+│   ├── integration/
+│   └── e2e/
+│
+├── docker-compose.yml
+├── docker-compose.prod.yml
+├── .env.example
+├── .gitignore
+├── README.md
+└── Makefile
+```
+
+I'd keep **frontend, API, and workers separate** even though we're starting small. This maps directly to the architecture we're planning.
+
+---
+
+# 2. Prerequisites
+
+Install:
+
+- **Git**
+- **Docker Desktop**
+- **Node.js 22 LTS**
+- **Python 3.12**
+- **VS Code** / PyCharm / whatever editor you prefer
+
+Verify:
+
+```bash
+git --version
+docker --version
+docker compose version
+node --version
+python --version
+```
+
+You don't actually need PostgreSQL or Redis installed locally because Docker will provide them.
+
+---
+
+# 3. Create the repository
+
+```bash
+mkdir metis
+cd metis
+
+git init
+```
+
+Create the initial directories:
+
+```bash
+mkdir -p apps/web
+mkdir -p apps/api
+mkdir -p workers/ingestion
+mkdir -p packages/shared
+mkdir -p infrastructure/docker
+mkdir -p infrastructure/nginx
+mkdir -p tests/integration
+mkdir -p tests/e2e
+```
+
+---
+
+# 4. Create the Next.js application
+
+From the root:
+
+```bash
+npx create-next-app@latest apps/web
+```
+
+Choose:
+
+```text
+TypeScript       Yes
+ESLint           Yes
+Tailwind CSS     Yes
+src/ directory   Yes
+App Router       Yes
+Turbopack        Yes
+Import alias     Yes
+```
+
+Then:
+
+```bash
+cd apps/web
+npm install @tanstack/react-query zustand
+cd ../..
+```
+
+We'll add shadcn when we start building the actual UI.
+
+---
+
+# 5. Create the FastAPI backend
+
+```bash
+cd apps/api
+
+python -m venv .venv
+```
+
+Activate it.
+
+### Linux/macOS
+
+```bash
+source .venv/bin/activate
+```
+
+### Windows
+
+```powershell
+.venv\Scripts\activate
+```
+
+Install the initial dependencies:
+
+```bash
+pip install fastapi uvicorn[standard] pydantic-settings sqlalchemy psycopg[binary] alembic python-multipart
+```
+
+Data dependencies:
+
+```bash
+pip install polars pyarrow duckdb openpyxl
+```
+
+Development:
+
+```bash
+pip install pytest pytest-asyncio httpx ruff mypy
+```
+
+Freeze them:
+
+```bash
+pip freeze > requirements.txt
+```
+
+---
+
+# 6. Basic API structure
+
+Create:
+
+```text
+apps/api/
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   │
+│   ├── api/
+│   │   └── routes/
+│   │
+│   ├── db/
+│   ├── models/
+│   ├── schemas/
+│   ├── services/
+│   └── core/
+│
+├── tests/
+├── requirements.txt
+└── Dockerfile
+```
+
+`main.py` initially only needs to prove the API works:
+
+```python
+from fastapi import FastAPI
+
+app = FastAPI(
+    title="Metis API",
+    version="0.1.0",
+)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+```
+
+Run:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+You should get:
+
+```text
+http://localhost:8000
+```
+
+and:
+
+```text
+http://localhost:8000/docs
+```
+
+---
+
+# 7. Infrastructure
+
+Our initial `docker-compose.yml` should contain:
+
+```text
+web
+api
+worker
+postgres
+redis
+minio
+```
+
+The important thing is that **the application services are stateless**.
+
+Postgres stores metadata.
+
+MinIO stores datasets.
+
+Redis handles jobs.
+
+That means later we can deploy the same architecture to AWS/GCP/Azure without rewriting the application.
+
+---
+
+# 8. Environment variables
+
+Create:
+
+```text
+.env.example
+```
+
+Something like:
+
+```env
+# Database
+POSTGRES_USER=metis
+POSTGRES_PASSWORD=change-me
+POSTGRES_DB=metis
+DATABASE_URL=postgresql+psycopg://metis:change-me@postgres:5432/metis
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# Object storage
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY=metis
+S3_SECRET_KEY=change-me
+S3_BUCKET=metis-datasets
+
+# Application
+ENVIRONMENT=development
+SECRET_KEY=change-me
+```
+
+Then:
+
+```bash
+cp .env.example .env
+```
+
+Never commit `.env`.
+
+---
+
+# 9. Gitignore
+
+At minimum:
+
+```gitignore
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+dist/
+*.pyc
+.DS_Store
+```
+
+---
+
+# 10. First Docker milestone
+
+Before we build **any ML functionality**, I want this to work:
+
+```text
+docker compose up
+```
+
+and give us:
+
+```text
+Next.js       localhost:3000
+FastAPI       localhost:8000
+Swagger       localhost:8000/docs
+PostgreSQL    internal
+Redis         internal
+MinIO         localhost:9001
+Worker        internal
+```
+
+Then we test:
+
+```text
+Browser
+   ↓
+Next.js
+   ↓
+FastAPI
+   ↓
+PostgreSQL
+```
+
+and:
+
+```text
+FastAPI
+   ↓
+Redis
+   ↓
+Worker
+```
+
+and:
+
+```text
+FastAPI
+   ↓
+MinIO
+```
+
+Only after that do we start building **Data → Ingestion**.
+
+---
+
+## Deployment
+
+For the first deployment, I would **not bother with Kubernetes**.
+
+A perfectly respectable architecture is:
+
+```text
+                    Internet
+                       │
+                       ▼
+                  Reverse Proxy
+                       │
+          ┌────────────┴────────────┐
+          ▼                         ▼
+       Next.js                   FastAPI
+                                    │
+                      ┌─────────────┼─────────────┐
+                      ▼             ▼             ▼
+                  PostgreSQL      Redis         S3
+                                    │
+                                    ▼
+                                  Worker
+```
+
+You can deploy that on a cloud VM initially, then migrate individual components to managed services as Metis grows.
+
+That gives us a **real deployable product without prematurely building enterprise infrastructure**.
+
+---
+
+### What I'd do next
+
+Don't start writing ingestion yet.
+
+First get the repository + Docker Compose + **Next.js ↔ FastAPI ↔ PostgreSQL ↔ Redis ↔ MinIO** skeleton working.
+
+Once that's alive, we can build our **first real vertical slice**:
+
+> **Upload CSV → direct upload to object storage → create ingestion job → worker processes it → stream progress to UI → persist ingestion results.**
+
+That will establish the foundation for virtually everything else in Metis.

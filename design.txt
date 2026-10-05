@@ -1,0 +1,7 @@
+font style: Josefin Slab
+font color: 472401
+side font color: 724E2A
+font size: 38, 28, 22
+background color: F7E1CB
+side background colour: F4CAA0
+icon colour: 472401
