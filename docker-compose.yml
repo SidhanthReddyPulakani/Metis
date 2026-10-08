@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: metis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: metis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: metis_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - metis_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d metis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8
+    container_name: metis-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - metis_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: metis-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: metis_minio_password
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - metis_minio_data:/data
+
+volumes:
+  metis_postgres_data:
+  metis_redis_data:
+  metis_minio_data:
