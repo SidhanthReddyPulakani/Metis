@@ -83,8 +83,8 @@ export function AuthPanel() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-md">
-      <header className="mb-9">
+    <section className="mx-auto w-full max-w-md min-w-0">
+      <header className="mb-5">
         <a
           href="/"
           className="text-4xl font-medium text-[#472401]"
@@ -98,7 +98,7 @@ export function AuthPanel() {
         </p>
       </header>
 
-      <div className="mb-7">
+      <div className="mb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-[#472401]">
           {mode === "login" ? "Welcome back" : "Create your account"}
         </h1>
@@ -111,7 +111,7 @@ export function AuthPanel() {
       </div>
 
       <div
-        className="mb-7 grid grid-cols-2 rounded-xl bg-[#724e2a]/10 p-1"
+        className="mb-5 grid grid-cols-2 rounded-xl bg-[#724e2a]/10 p-1"
         aria-label="Authentication mode"
       >
         <Button
@@ -145,7 +145,7 @@ export function AuthPanel() {
         </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label
             htmlFor="auth-email"
@@ -221,7 +221,7 @@ export function AuthPanel() {
         </Button>
       </form>
 
-      <p className="mt-7 text-center text-xs leading-relaxed text-[#724e2a]">
+      <p className="mt-4 text-center text-xs leading-relaxed text-[#724e2a]">
         Your session is managed securely by Metis.
       </p>
     </section>

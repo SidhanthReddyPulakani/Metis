@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${josefinSlab.variable} ${geistMono.variable} antialiased`}
+      className={`${josefinSlab.variable} ${geistMono.variable} antialiased h-full overflow-hidden`}
     >
       <body className="min-h-screen flex flex-col bg-[#F7E1CB] font-[family-name:var(--font-josefin-slab)]">
         <QueryProvider>{children}</QueryProvider>
