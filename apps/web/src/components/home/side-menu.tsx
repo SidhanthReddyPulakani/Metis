@@ -65,6 +65,7 @@ export function SideMenu() {
     router.push("/login");
   }
 
+
   function handleProjectAction() {
     setIsOpen(false);
 
@@ -73,8 +74,9 @@ export function SideMenu() {
       return;
     }
 
-    // Project creation route will be implemented separately.
+    router.push("/projects/new");
   }
+
 
   function handleExistingProjects() {
     setIsOpen(false);

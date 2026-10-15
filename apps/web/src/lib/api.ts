@@ -94,4 +94,27 @@ export const api = {
         method: "POST",
       }),
   },
+  projects: {
+  create: (input: CreateProjectInput) =>
+    request<Project>("/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+      }),
+  },
 };
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  status: "active" | "archived";
+  default_task_type: "classification" | "regression" | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateProjectInput {
+  name: string;
+  description?: string | null;
+}
